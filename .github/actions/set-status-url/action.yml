@@ -1,0 +1,25 @@
+name: 'Set status URL'
+description: 'Set the STATUS_URL environment variable based on rdgen mode'
+inputs:
+  rdgen:
+    description: 'Whether running in rdgen mode'
+    required: true
+  genurl:
+    description: 'Base rdgen URL'
+    required: false
+    default: ''
+  api-server:
+    description: 'Custom API server URL'
+    required: false
+    default: ''
+runs:
+  using: 'composite'
+  steps:
+    - name: Set STATUS_URL
+      shell: bash
+      run: |
+        if [ "${{ inputs.rdgen }}" = "true" ]; then
+          echo "STATUS_URL=${{ inputs.genurl }}/updategh" >> "$GITHUB_ENV"
+        else
+          echo "STATUS_URL=${{ inputs.api-server }}/api/updategh" >> "$GITHUB_ENV"
+        fi

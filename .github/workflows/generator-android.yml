@@ -104,7 +104,7 @@ jobs:
           data: '{"uuid": "${{ env.uuid }}"}'
 
       - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@v1.3.1
         with:
           tool-cache: false
           android: false
@@ -121,15 +121,12 @@ jobs:
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'true' }}
-        run: |
-          echo "STATUS_URL=${{ secrets.GENURL }}/updategh" >> $GITHUB_ENV
-
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'false' }}
-        run: |
-          echo "STATUS_URL=${{ env.apiServer }}/api/updategh" >> $GITHUB_ENV
+      - name: Set status URL
+        uses: ./.github/actions/set-status-url
+        with:
+          rdgen: ${{ env.rdgen }}
+          genurl: ${{ secrets.GENURL }}
+          api-server: ${{ env.apiServer }}
 
       - name: Install dependencies
         run: |
@@ -243,7 +240,7 @@ jobs:
         shell: bash
 
       - name: Restore bridge files
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v4
         with:
           name: bridge-artifact
           path: ./
@@ -400,8 +397,7 @@ jobs:
           shell: bash
           continue_on_error: true
           command: |
-            wget https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/xoffline.diff
-            git apply xoffline.diff
+            git apply .github/patches/xoffline.diff
 
       - name: hide-cm
         if: env.hidecm == 'true'
@@ -413,8 +409,7 @@ jobs:
           shell: bash
           continue_on_error: true
           command: |
-            wget https://raw.githubusercontent.com/bryangerlach/rdgen/refs/heads/master/.github/patches/hidecm.diff
-            git apply hidecm.diff
+            git apply .github/patches/hidecm.diff
 
       - name: removeNewVersionNotif
         continue-on-error: true
@@ -464,7 +459,7 @@ jobs:
           esac
 
       - name: Upload Rustdesk library to Artifacts
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: librustdesk.so.${{ matrix.job.target }}
           path: ./target/${{ matrix.job.target }}/release/liblibrustdesk.so
@@ -602,15 +597,12 @@ jobs:
           customHeaders: '{"Content-Type": "application/json"}'
           data: '{"uuid": "${{ env.uuid }}"}'
 
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'true' }}
-        run: |
-          echo "STATUS_URL=${{ secrets.GENURL }}/updategh" >> $GITHUB_ENV
-
-      - name: Set rdgen value
-        if: ${{ env.rdgen == 'false' }}
-        run: |
-          echo "STATUS_URL=${{ env.apiServer }}/api/updategh" >> $GITHUB_ENV
+      - name: Set status URL
+        uses: ./.github/actions/set-status-url
+        with:
+          rdgen: ${{ env.rdgen }}
+          genurl: ${{ secrets.GENURL }}
+          api-server: ${{ env.apiServer }}
 
       - uses: geekyeggo/delete-artifact@v5
         continue-on-error: true
