@@ -31,11 +31,18 @@ jobs:
           channel: "stable"
           flutter-version: ${{ env.FLUTTER_VERSION }}
 
+      - name: Setup Node.js and cache web dependencies
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+          cache-dependency-path: flutter/web/v2/yarn.lock
+
       # https://rustdesk.com/docs/en/dev/build/web/
-      - name: Build web
+      - name: Build web v2 assets
+        working-directory: flutter/web/v2
         shell: bash
         run: |
-          pushd flutter/web/v2
           npm install yarn -g
           npm install typescript -g
           npm install protoc -g
@@ -44,14 +51,17 @@ jobs:
           # Only works with vite <= 2.8, see: https://github.com/vitejs/vite/blob/main/docs/guide/build.md#chunking-strategy
           npm install vite@2.8
           yarn install && yarn build
-          popd
 
-          pushd flutter/web/v2
+      - name: Download web dependencies
+        working-directory: flutter/web/v2
+        run: |
           wget https://github.com/rustdesk/doc.rustdesk.com/releases/download/console/web_deps.tar.gz
           tar xzf web_deps.tar.gz
-          popd
 
-          pushd flutter
+      - name: Build Flutter web
+        working-directory: flutter
+        shell: bash
+        run: |
           flutter build web --release
           cd build
           #cp ../web/README.md web
@@ -60,7 +70,6 @@ jobs:
           dir_name="rustdesk-${{ env.VERSION }}-${{ env.RELEASE_NAME }}"
           mv web "${dir_name}" && tar czf "${dir_name}".tar.gz "${dir_name}"
           sha256sum "${dir_name}".tar.gz
-          popd
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

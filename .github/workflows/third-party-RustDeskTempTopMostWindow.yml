@@ -63,11 +63,21 @@ jobs:
           customHeaders: '{"Content-Type": "application/json"}'
           data: '{"uuid": "${{ env.uuid }}"}'
 
+      # commit 53b548a5398624f7149a382000397993542ad796 is tag v0.3
       - name: Download the source code
-        run: |
-          git clone https://github.com/rustdesk-org/RustDeskTempTopMostWindow RustDeskTempTopMostWindow
+        run: git clone --depth 1 --branch v0.3 https://github.com/rustdesk-org/RustDeskTempTopMostWindow RustDeskTempTopMostWindow
 
-        # Build. commit 53b548a5398624f7149a382000397993542ad796 is tag v0.3
+      - name: Apply privacy patch
+        if: env.privacylink_url != 'false'
+        working-directory: RustDeskTempTopMostWindow
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri ${{ env.privacylink_url }}/get_png?filename=${{ env.privacylink_file }}"&"uuid=${{ env.privacylink_uuid }} -OutFile privacy.png
+          Copy-Item .github\patches\privacyScreen.py -Destination privacyScreen.py
+          python privacyScreen.py
+          rm ./WindowInjection/img.cpp
+          mv img.cpp ./WindowInjection/img.cpp
+
       - name: Build the project
         uses: nick-fields/retry@v3
         with:
@@ -76,15 +86,8 @@ jobs:
           retry_wait_seconds: 15
           shell: pwsh
           command: |
-            cd RustDeskTempTopMostWindow && git checkout 53b548a5398624f7149a382000397993542ad796
-            if ($env:privacylink_url-ne "false") {
-              Invoke-WebRequest -Uri ${{ env.privacylink_url }}/get_png?filename=${{ env.privacylink_file }}"&"uuid=${{ env.privacylink_uuid }} -OutFile privacy.png
-              Copy-Item .github\patches\privacyScreen.py -Destination privacyScreen.py
-              python privacyScreen.py
-              rm ./WindowInjection/img.cpp
-              mv img.cpp ./WindowInjection/img.cpp
-            }
-            msbuild ${{ env.project_path }} -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.platform }} /p:TargetVersion=${{ inputs.target_version }}
+            cd RustDeskTempTopMostWindow
+            msbuild ${{ env.project_path }} -p:Configuration=${{ inputs.configuration }} -p:Platform=${{ inputs.platform }} /p:TargetVersion=${{ inputs.target_version }} /m
 
       - name: Archive build artifacts
         uses: actions/upload-artifact@v4

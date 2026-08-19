@@ -121,11 +121,17 @@ jobs:
             repository: rustdesk/rustdesk
             submodules: recursive
 
-      - name: Install imagemagick and potrace and nasm and and
+      - name: Install build runtime
         shell: bash
         run: |
-          brew install imagemagick potrace nasm cmake gcc wget ninja
+          brew install imagemagick potrace nasm cmake gcc wget ninja llvm create-dmg
           echo "$(brew --prefix imagemagick)/bin" >> $GITHUB_PATH
+          # pkg-config may already be installed by the runner image
+          if command -v pkg-config &>/dev/null; then
+              echo "pkg-config is already installed"
+          else
+              brew install pkg-config
+          fi
 
       - name: Update macOS Info.plist and settings
         continue-on-error: false
@@ -225,15 +231,11 @@ jobs:
           mv ./flutter/pubspec.yaml.tmp ./flutter/pubspec.yaml
           rm ./flutter/temp_dependency.txt 
           
-      - name: Install build runtime
-        run: |
-          brew install llvm create-dmg
-          # pkg-config is handled in a separate step, because it may be already installed by `macos-latest`(14.7.1) runner
-          if command -v pkg-config &>/dev/null; then
-              echo "pkg-config is already installed"
-          else
-              brew install pkg-config
-          fi
+      - name: Cache NASM
+        uses: actions/cache@v4
+        with:
+          path: ./nasm-2.16.03-macosx.zip
+          key: nasm-2.16.03-macosx-${{ runner.os }}
 
       - name: Install NASM
         run: |
@@ -241,8 +243,10 @@ jobs:
           # Do NOT use `brew install nasm` which installs NASM 3.x.
           # NASM 3.x is a complete rewrite with incompatible CLI options and removed features.
           # aom and other multimedia libraries require NASM 2.x for x86/x86_64 assembly.
-          wget https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
-          unzip nasm-2.16.03-macosx.zip
+          if [ ! -f nasm-2.16.03-macosx.zip ]; then
+            wget https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/macosx/nasm-2.16.03-macosx.zip
+          fi
+          unzip -o nasm-2.16.03-macosx.zip
           sudo cp nasm-2.16.03/nasm /usr/local/bin/nasm
           nasm --version
 
@@ -497,26 +501,25 @@ jobs:
       #   run: |
       #     cp -rf ../target/release/service ./build/macos/Build/Products/Release/RustDesk.app/Contents/MacOS/
       
+      - name: Cache rcodesign
+        if: env.MACOS_P12_BASE64 != null
+        uses: actions/cache@v4
+        with:
+          path: ./apple-codesign-0.22.0-macos-universal.tar.gz
+          key: rcodesign-0.22.0-${{ runner.os }}
+
       - name: Install rcodesign tool
         if: env.MACOS_P12_BASE64 != null
         shell: bash
         run: |
+          if [ ! -f "$GITHUB_WORKSPACE/apple-codesign-0.22.0-macos-universal.tar.gz" ]; then
+            wget -O "$GITHUB_WORKSPACE/apple-codesign-0.22.0-macos-universal.tar.gz" https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-macos-universal.tar.gz
+          fi
           pushd /tmp
-          wget https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.22.0/apple-codesign-0.22.0-macos-universal.tar.gz
-          tar -zxvf apple-codesign-0.22.0-macos-universal.tar.gz
+          tar -zxvf "$GITHUB_WORKSPACE/apple-codesign-0.22.0-macos-universal.tar.gz"
           mv apple-codesign-0.22.0-macos-universal/rcodesign /usr/local/bin
           popd
 
-      - name: Install build runtime
-        run: |
-          brew install llvm create-dmg nasm cmake gcc wget ninja
-          # pkg-config is handled in a separate step, because it may be already installed by `macos-latest`(14.7.1) runner
-          if command -v pkg-config &>/dev/null; then
-              echo "pkg-config is already installed"
-          else
-              brew install pkg-config
-          fi
-  
       - name: Show version information (Rust, cargo, Clang)
         shell: bash
         run: |

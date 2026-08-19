@@ -342,6 +342,12 @@ jobs:
           name: bridge-artifact
           path: ./
 
+      - name: Cache Linux build tools
+        uses: actions/cache@v4
+        with:
+          path: ./.cache/linux-build
+          key: linux-build-tools-${{ matrix.job.target }}-${{ env.RUST_VERSION }}-${{ env.FLUTTER_VERSION }}
+
       - uses: rustdesk-org/run-on-arch-action@amd64-support
         name: Build rustdesk
         id: vcpkg
@@ -356,6 +362,7 @@ jobs:
           dockerRunArgs: |
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
+            --volume "${PWD}/.cache/linux-build:/opt/rdgen-cache"
           shell: /bin/bash
           install: |
             apt-get update -y
@@ -402,21 +409,30 @@ jobs:
           run: |
             # disable git safe.directory
             git config --global --add safe.directory "*"
-            # rust
+
+            echo "::group::Install Rust toolchain"
             pushd /opt
-            # do not use rustup, because memory overflow in qemu
-            wget -O rust.tar.gz https://static.rust-lang.org/dist/rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}.tar.gz
+            mkdir -p /opt/rdgen-cache
+            RUST_TAR="rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}.tar.gz"
+            if [ -f "/opt/rdgen-cache/$RUST_TAR" ]; then
+              echo "Using cached $RUST_TAR"
+              cp "/opt/rdgen-cache/$RUST_TAR" ./rust.tar.gz
+            else
+              wget -O "/opt/rdgen-cache/$RUST_TAR" "https://static.rust-lang.org/dist/$RUST_TAR"
+              cp "/opt/rdgen-cache/$RUST_TAR" ./rust.tar.gz
+            fi
             tar -zxvf rust.tar.gz > /dev/null && rm rust.tar.gz
             cd rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }} && ./install.sh
             rm -rf rust-${{env.RUST_TOOLCHAIN_VERSION}}-${{ matrix.job.target }}
-            # edit config
             mkdir -p ~/.cargo/
             echo """
               [source.crates-io]
               registry = 'https://github.com/rust-lang/crates.io-index'
             """ > ~/.cargo/config
             cat ~/.cargo/config
-            # start build
+            echo "::endgroup::"
+
+            echo "::group::Build Rust library"
             pushd /workspace
             export VCPKG_ROOT=/opt/artifacts/vcpkg
             if [[ "${{ matrix.job.arch }}" == "aarch64" ]]; then
@@ -434,9 +450,9 @@ jobs:
             cargo build --lib $JOBS --features hwcodec,flutter,unix-file-copy-paste --release
             rm -rf target/release/deps target/release/build
             rm -rf ~/.cargo
+            echo "::endgroup::"
 
-            # Setup Flutter
-            # disable git safe.directory
+            echo "::group::Setup Flutter"
             git config --global --add safe.directory "*"
             pushd /workspace
             case ${{ matrix.job.arch }} in
@@ -451,8 +467,15 @@ jobs:
             esac
             popd
             pushd /opt
-            wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
-            tar xf flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz
+            FLUTTER_TAR="flutter_linux_${{ env.FLUTTER_VERSION }}-stable.tar.xz"
+            if [ -f "/opt/rdgen-cache/$FLUTTER_TAR" ]; then
+              echo "Using cached $FLUTTER_TAR"
+              cp "/opt/rdgen-cache/$FLUTTER_TAR" ./$FLUTTER_TAR
+            else
+              wget -O "/opt/rdgen-cache/$FLUTTER_TAR" "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/$FLUTTER_TAR"
+              cp "/opt/rdgen-cache/$FLUTTER_TAR" ./$FLUTTER_TAR
+            fi
+            tar xf $FLUTTER_TAR && rm -f $FLUTTER_TAR
             case ${{ matrix.job.arch }} in
               aarch64)
                 # clone repo and reset to flutter ${{ env.FLUTTER_VERSION }}
@@ -483,8 +506,9 @@ jobs:
               git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
               popd
             fi
+            echo "::endgroup::"
 
-            # build flutter
+            echo "::group::Prepare assets and whitelabel"
             pushd /workspace
             mkdir output
             chmod 777 output -R
@@ -536,7 +560,9 @@ jobs:
                   sed -ie '/^%files$/i\\n' "$file"
                 done
             fi
+            echo "::endgroup::"
 
+            echo "::group::Build Flutter and package"
             python3 ./build.py --flutter --skip-cargo
             for name in *.deb; do
               mv "$name" /workspace/output/"${{ env.filename }}-${{ matrix.job.arch }}.deb"
@@ -569,6 +595,7 @@ jobs:
             for name in *.rpm; do
                 mv "$name" /workspace/output/"${{ env.filename }}-suse-${{ matrix.job.arch }}.rpm"
             done
+            echo "::endgroup::"
 
       # only x86_64 for arch since we can not find newest arm64 docker image to build
       # old arch image does not make sense for arch since it is "arch" which always update to date
