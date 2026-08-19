@@ -23,20 +23,35 @@ jobs:
       - name: Enable Long Paths
         run: git config --global core.longpaths true
 
-      - name: Install Build Tools
+      - name: Cache NASM
+        id: cache-nasm
+        uses: actions/cache@v4
+        with:
+          path: C:\Program Files\NASM
+          key: nasm-2.16.03-windows-${{ runner.os }}
+
+      - name: Install NASM
+        if: steps.cache-nasm.outputs.cache-hit != 'true'
+        shell: pwsh
         run: |
-          choco install nasm
-          echo "C:\Program Files\NASM" >> $GITHUB_PATH
+          $installer = "nasm-installer.exe"
+          Invoke-WebRequest -Uri "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-installer-x64.exe" -OutFile $installer
+          Start-Process -FilePath $installer -ArgumentList "/S" -Wait
+          Remove-Item $installer
+
+      - name: Add NASM to PATH
+        run: |
+          echo "C:\Program Files\NASM" >> $env:GITHUB_PATH
+        shell: pwsh
 
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Clone RustDesk overlays
         run: |
-          git clone --filter=blob:none --sparse https://github.com/rustdesk/rustdesk.git rustdesk_repo
+          git clone --depth 1 --filter=blob:none --sparse --branch master https://github.com/rustdesk/rustdesk.git rustdesk_repo
           cd rustdesk_repo
           git sparse-checkout set res/vcpkg
-          git checkout master -- vcpkg.json || git checkout master -- vcpkg.json
           cd ..
           cp rustdesk_repo/vcpkg.json .
           mkdir -p res

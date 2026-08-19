@@ -186,19 +186,19 @@ jobs:
         shell: bash
         run: |
           #./src/platform/windows.rs
-          sed -i -e 's|reg add {}|reg add \\\"{}\\\"|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\.{ext} /f|reg add \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\.{ext}\\\\DefaultIcon /f|reg add \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\\DefaultIcon\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell /f|reg add \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell\\\\open /f|reg add \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell\\\\open\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell\\\\open\\\\command|reg add \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\\shell\\\\open\\\\command\\\"|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\{ext} /f|reg add \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\{ext}\\\\shell /f|reg add \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\\shell\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\{ext}\\\\shell\\\\open /f|reg add \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\\shell\\\\open\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\\\{ext}\\\\shell\\\\open\\\\command /f|reg add \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\\shell\\\\open\\\\command\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|{subkey}|\\\"{subkey}\\\"|' ./src/platform/windows.rs
-          sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\\\.{ext} /f|reg delete \\\"HKEY_CLASSES_ROOT\\\\.{ext}\\\" /f|' ./src/platform/windows.rs
-          sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\\\{ext} /f|reg delete \\\"HKEY_CLASSES_ROOT\\\\{ext}\\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add {}|reg add \\"{}\\"|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\.{ext} /f|reg add \\"HKEY_CLASSES_ROOT\\.{ext}\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\.{ext}\\DefaultIcon /f|reg add \\"HKEY_CLASSES_ROOT\\.{ext}\\DefaultIcon\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\.{ext}\\shell /f|reg add \\"HKEY_CLASSES_ROOT\\.{ext}\\shell\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open /f|reg add \\"HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\command|reg add \\"HKEY_CLASSES_ROOT\\.{ext}\\shell\\open\\command\\"|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\{ext} /f|reg add \\"HKEY_CLASSES_ROOT\\{ext}\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\{ext}\\shell /f|reg add \\"HKEY_CLASSES_ROOT\\{ext}\\shell\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open /f|reg add \\"HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg add HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\command /f|reg add \\"HKEY_CLASSES_ROOT\\{ext}\\shell\\open\\command\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|{subkey}|\\"{subkey}\\"|' ./src/platform/windows.rs
+          sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\.{ext} /f|reg delete \\"HKEY_CLASSES_ROOT\\.{ext}\\" /f|' ./src/platform/windows.rs
+          sed -i -e 's|reg delete HKEY_CLASSES_ROOT\\{ext} /f|reg delete \\"HKEY_CLASSES_ROOT\\{ext}\\" /f|' ./src/platform/windows.rs
           
       - name: change company name
         if: env.compname != 'Purslane Ltd'
@@ -234,7 +234,7 @@ jobs:
           sed -i -e "s|const url = 'https://rustdesk.com/';|const url = '${{ env.urlLink }}';|" ./flutter/lib/mobile/pages/settings_page.dart
           sed -i -e "s|launchUrlString('https://rustdesk.com/privacy.html')|launchUrlString('${{ env.urlLink }}/privacy.html')|" ./flutter/lib/mobile/pages/settings_page.dart
           sed -i -e "s|https://rustdesk.com/privacy.html|${{ env.urlLink }}/privacy.html|" ./flutter/lib/desktop/pages/install_page.dart
-          sed -i -e "s|rustdesk.com|${{ env.urlLink }}|" ./res/msi/Package/License.rtf
+          sed -i -e 's|rustdesk.com|${{ env.urlLink }}|' ./res/msi/Package/License.rtf
 
       - name: change download link to custom
         if: env.downloadLink != 'https://rustdesk.com/download'
@@ -407,40 +407,6 @@ jobs:
               Write-Output "rustdesk_printer_driver_v4-1.4, checksums do not match, ignore the file."
           } else {
               Write-Output "printer_driver_adapter.dll, checksums do not match, ignore the file."
-          }
-
-      - name: icon stuff
-          Invoke-WebRequest -Uri https://github.com/rustdesk-org/rdev/releases/download/usbmmidd_v2/usbmmidd_v2.zip -OutFile usbmmidd_v2.zip
-          Expand-Archive usbmmidd_v2.zip -DestinationPath . -Force
-          Remove-Item -Path usbmmidd_v2\Win32 -Recurse
-          Remove-Item -Path "usbmmidd_v2\deviceinstaller64.exe", "usbmmidd_v2\deviceinstaller.exe", "usbmmidd_v2\usbmmidd.bat"
-          mv -Force .\usbmmidd_v2 ./rustdesk   
-
-          # Download printer driver files and extract them to ./rustdesk
-          try {
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/rustdesk_printer_driver_v4-1.4.zip -OutFile rustdesk_printer_driver_v4-1.4.zip
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/printer_driver_adapter.zip -OutFile printer_driver_adapter.zip
-            Invoke-WebRequest -Uri https://github.com/rustdesk/hbb_common/releases/download/driver/sha256sums -OutFile sha256sums
-
-            # Check and move the files
-            $checksum_driver = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*rustdesk_printer_driver_v4-1.4\.zip$').Matches.Groups[1].Value
-            $downloadsum_driver = Get-FileHash -Path rustdesk_printer_driver_v4-1.4.zip -Algorithm SHA256
-            $checksum_adapter = (Select-String -Path .\sha256sums -Pattern '^([a-fA-F0-9]{64}) \*printer_driver_adapter\.zip$').Matches.Groups[1].Value
-            $downloadsum_adapter = Get-FileHash -Path printer_driver_adapter.zip -Algorithm SHA256
-            if ($checksum_driver -eq $downloadsum_driver.Hash -and $checksum_adapter -eq $downloadsum_adapter.Hash) {
-                Write-Output "rustdesk_printer_driver_v4-1.4, checksums match, extract the file."
-                Expand-Archive rustdesk_printer_driver_v4-1.4.zip -DestinationPath .
-                mkdir ./rustdesk/drivers
-                mv -Force .\rustdesk_printer_driver_v4-1.4 ./rustdesk/drivers/RustDeskPrinterDriver
-                Expand-Archive printer_driver_adapter.zip -DestinationPath .
-                mv -Force .\printer_driver_adapter.dll ./rustdesk
-            } elseif ($checksum_driver -ne $downloadsum_driver.Hash) {
-                Write-Output "rustdesk_printer_driver_v4-1.4, checksums do not match, ignore the file."
-            } else {
-                Write-Output "printer_driver_adapter.dll, checksums do not match, ignore the file."
-            }
-          } catch {
-              Write-Host "Ingore the printer driver error."
           }
 
       - name: icon stuff

@@ -79,7 +79,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
+      - name: Backup rdgen patches
+        run: |
+          cp -r "${{ github.workspace }}/.github/patches" "/tmp/rdgen-patches-backup"
+          cp -r "${{ github.workspace }}/.github/patches" "${{ github.workspace }}/patches-backup"
+
       - uses: actions/download-artifact@v4
         with:
           name: encrypted-secrets-zip
@@ -270,9 +275,9 @@ jobs:
           command: |
             sed -i -e 's|rs-ny.rustdesk.com|${{ env.server }}|' ./libs/hbb_common/src/config.rs
             sed -i -e 's|OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=|${{ env.key }}|' ./libs/hbb_common/src/config.rs
-            cp .github/patches/allowCustom.py allowCustom.py
+            cp patches-backup/allowCustom.py allowCustom.py
             python allowCustom.py
-            git apply .github/patches/removeSetupServerTip.diff
+            git apply patches-backup/removeSetupServerTip.diff
             echo -n "${{ env.custom }}" | cat > ./custom_.txt
             # sed -i '/intl:/a \ \ archive: ^3.6.1' ./flutter/pubspec.yaml
             sed -i -e 's|https://admin.rustdesk.com|${{ env.apiServer }}|' ./src/common.rs
@@ -315,7 +320,7 @@ jobs:
           retry_wait_seconds: 15
           shell: bash
           command: |
-            git apply .github/patches/xoffline.diff
+            git apply patches-backup/xoffline.diff
 
       - name: hide-cm
         if: env.hidecm == 'true'
@@ -326,7 +331,7 @@ jobs:
           retry_wait_seconds: 15
           shell: bash
           command: |
-            git apply .github/patches/hidecm.diff
+            git apply patches-backup/hidecm.diff
         
       - name: removeNewVersionNotif
         continue-on-error: true
@@ -363,6 +368,7 @@ jobs:
             --volume "${PWD}:/workspace"
             --volume "/opt/artifacts:/opt/artifacts"
             --volume "${PWD}/.cache/linux-build:/opt/rdgen-cache"
+            --volume "/tmp/rdgen-patches-backup:/rdgen-patches-backup"
           shell: /bin/bash
           install: |
             apt-get update -y
@@ -409,6 +415,10 @@ jobs:
           run: |
             # disable git safe.directory
             git config --global --add safe.directory "*"
+
+            echo "::group::Restore rdgen patches"
+            cp -r /rdgen-patches-backup /workspace/patches-backup
+            echo "::endgroup::"
 
             echo "::group::Install Rust toolchain"
             pushd /opt
@@ -503,7 +513,7 @@ jobs:
                   pushd /opt/flutter
                 ;;
               esac
-              git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
+              git apply /rdgen-patches-backup/flutter_3.24.4_dropdown_menu_enableFilter.diff
               popd
             fi
             echo "::endgroup::"
