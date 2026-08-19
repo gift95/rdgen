@@ -87,7 +87,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
+      - name: Backup rdgen patches
+        run: |
+          cp -r "${{ github.workspace }}/.github/patches" "${{ github.workspace }}/patches-backup"
+
       - uses: actions/download-artifact@v4
         with:
           name: encrypted-secrets-zip
@@ -200,7 +204,7 @@ jobs:
         continue-on-error: true
         run: |
           cd $(dirname $(dirname $(which flutter)))
-          [[ "3.24.5" == ${{env.ANDROID_FLUTTER_VERSION}} ]] && git apply ${{ github.workspace }}/.github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff
+          [[ "3.24.5" == ${{env.ANDROID_FLUTTER_VERSION}} ]] && git apply ${{ github.workspace }}/patches-backup/flutter_3.24.4_dropdown_menu_enableFilter.diff
   
 
       - name: Cache Android NDK
@@ -412,7 +416,7 @@ jobs:
           shell: bash
           continue_on_error: true
           command: |
-            git apply .github/patches/xoffline.diff
+            git apply patches-backup/xoffline.diff
 
       - name: hide-cm
         if: env.hidecm == 'true'
@@ -424,7 +428,7 @@ jobs:
           shell: bash
           continue_on_error: true
           command: |
-            git apply .github/patches/hidecm.diff
+            git apply patches-backup/hidecm.diff
 
       - name: removeNewVersionNotif
         continue-on-error: true

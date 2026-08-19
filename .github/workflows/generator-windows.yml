@@ -85,7 +85,12 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        
+
+      - name: Backup rdgen patches
+        shell: pwsh
+        run: |
+          Copy-Item -Path "${{ github.workspace }}\.github\patches" -Destination "${{ github.workspace }}\patches-backup" -Recurse -Force
+
       - uses: actions/download-artifact@v4
         with:
           name: encrypted-secrets-zip
@@ -295,7 +300,7 @@ jobs:
       - name: Patch flutter
         shell: bash
         run: |
-          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
+          cp patches-backup/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
           cd $(dirname $(dirname $(which flutter)))
           [[ "3.24.5" == ${{env.FLUTTER_VERSION}} ]] && git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
 
